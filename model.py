@@ -1,29 +1,51 @@
+### Refactored Code
 import torch
-imoprt torch.nn as nn
-import torch.optim as optim
+import torch.nn as nn
 
-# deifne a tiny cnn for cpu training
 
 class TinyCNN(nn.Module):
-  def __init__(self):
-    super(TinyCNN, self).__init__()
-    self.conv1=nn.Conv2d(1,8,kernel_size=3,stride=1, padding=1)
-    self.relu=nn.ReLU()
-    self.pool=nn.MaxPool2d(kernel_size=2,stride=2)
-    self.fc1=nn.Linear(8*12*14,10)
+def __init__(self, num_classes: int = 10, dropout_p: float = 0.5):
+super(TinyCNN, self).__init__()
 
-  def forward(self,x):
-    x=self.conv1(x)
-    x=self.relu(x)
-    x=self.pool(x)
-    x=x.view(x.size(0),-1) #flattening
-    return x 
+# Block 1: Conv -> BatchNorm -> ReLU -> MaxPool (28x28 -> 14x14)
+self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, stride=1, padding=1)
+self.bn1 = nn.BatchNorm2d(16)
 
-if __name__ == "__main__":
-  model = TinyCNN()
-  print("model initialized successfully")
-  dummy_input = torch.randn(1,1,28,28)
-  output = model(dummy_input)
-  print(f"output shape is : {output.shape")
+# Block 2: Conv -> BatchNorm -> ReLU -> MaxPool (14x14 -> 7x7)
+self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
+self.bn2 = nn.BatchNorm2d(32)
 
+# Activation and Pooling
+self.relu = nn.ReLU()
+self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+# Regularization & Classification Head
+self.dropout = nn.Dropout(p=dropout_p)
+self.fc1 = nn.Linear(32 * 7 * 7, 64)
+self.fc2 = nn.Linear(64, num_classes)
+
+def forward(self, x: torch.Tensor) -> torch.Tensor:
+# Layer 1
+x = self.conv1(x)
+x = self.bn1(x)
+x = self.relu(x)
+x = self.pool(x)
+
+# Layer 2
+x = self.conv2(x)
+x = self.bn2(x)
+x = self.relu(x)
+x = self.pool(x)
+
+# Flatten (Batch Size, 32 * 7 * 7)
+x = x.view(x.size(0), -1)
+
+# Classifier
+x = self.dropout(x)
+x = self.fc1(x)
+x = self.relu(x)
+x = self.dropout(x)
+x = self.fc2(x)
+
+return x
 
